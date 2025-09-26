@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assistente Pneumológico - Chat Especializado</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: #334155;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #64748b;
+            border-radius: 3px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        
+        .message-animation {
+            animation: fadeInUp 0.3s ease-out;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .typing-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background-color: #94a3b8;
+            border-radius: 50%;
+            animation: typingDot 1.4s infinite ease-in-out;
+        }
+        
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        .typing-dot:nth-child(3) { animation-delay: 0s; }
+        
+        @keyframes typingDot {
+            0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+        
+        .pulse-recording {
+            animation: pulseRed 1.5s infinite;
+        }
+        
+        @keyframes pulseRed {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-slate-800/90 backdrop-blur border-b border-slate-700 sticky top-0 z-10">
+        <div class="max-w-4xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-xl font-semibold text-emerald-400">🫁 Assistente Pneumológico</h1>
+                    <p class="text-sm text-slate-300">Especializado em pulmão e doenças respiratórias</p>
+                </div>
+                <div class="flex items-center gap-2 text-xs text-slate-400">
+                    <div id="statusIndicator" class="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                    <span>Online</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Chat Container -->
+    <main class="max-w-4xl mx-auto p-4 h-[calc(100vh-120px)] flex flex-col">
+        <!-- Chat Messages -->
+        <div id="chatMessages" class="flex-1 overflow-y-auto space-y-4 mb-4 p-4 bg-slate-800/30 rounded-lg custom-scroll">
+            <!-- Welcome message -->
+            <div class="flex justify-start message-animation">
+                <div class="max-w-[85%] rounded-lg bg-slate-800 border border-slate-700 px-4 py-3">
+                    <div class="flex items-start gap-2">
+                        <div class="w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center text-sm font-semibold">
+                            🫁
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-emerald-400 mb-1">Assistente Pneumológico</p>
+                            <p class="text-sm text-slate-100">Olá! Sou seu assistente especializado em <strong>pneumologia</strong> (medicina respiratória).</p>
+                            <p class="text-xs text-slate-300 mt-2">Posso ajudar com informações sobre:</p>
+                            <ul class="text-xs text-slate-300 mt-1 ml-2">
+                                <li>• Anatomia e fisiologia do sistema respiratório</li>
+                                <li>• Doenças pulmonares (asma, DPOC, pneumonia, etc.)</li>
+                                <li>• Sintomas respiratórios e suas causas</li>
+                                <li>• Exames diagnósticos (espirometria, tomografia, etc.)</li>
+                                <li>• Prevenção e fatores de risco</li>
+                            </ul>
+                            <p class="text-xs text-amber-300 mt-2">⚠️ <em>Importante: Este assistente não substitui consulta médica profissional.</em></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Input Form -->
+        <form id="chatForm" class="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+            <div class="flex gap-3 items-end">
+                <!-- Text Input -->
+                <div class="flex-1">
+                    <textarea 
+                        id="chatInput" 
+                        placeholder="Pergunte sobre pulmão, doenças respiratórias, sintomas..." 
+                        class="w-full px-4 py-3 rounded-lg bg-slate-700 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-slate-100 placeholder-slate-400 resize-none"
+                        rows="1"
+                        required
+                        maxlength="1000"
+                    ></textarea>
+                    <div class="flex justify-between items-center mt-1">
+                        <span class="text-xs text-slate-500">Pressione Shift+Enter para nova linha</span>
+                        <span id="charCounter" class="text-xs text-slate-500">0/1000</span>
+                    </div>
+                </div>
+
+                <!-- Voice Record Button -->
+                <button 
+                    id="recordBtn" 
+                    type="button" 
+                    class="px-4 py-3 rounded-lg bg-red-600 hover:bg-red-500 text-white font-medium transition-all duration-200 flex items-center gap-2"
+                    title="Clique para gravar áudio (transcrição automática)"
+                >
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clip-rule="evenodd"></path>
+                    </svg>
+                    <span>Falar</span>
+                </button>
+
+                <!-- Send Button -->
+                <button 
+                    id="sendBtn" 
+                    type="submit" 
+                    class="px-6 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium transition-colors duration-200 flex items-center gap-2"
+                >
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path>
+                    </svg>
+                    <span>Enviar</span>
+                </button>
+            </div>
+        </form>
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center text-xs text-slate-500 py-4">
+        <p>Assistente especializado em Pneumologia • Desenvolvido para fins educacionais</p>
+    </footer>
+
+    <!-- Scripts -->
+    <script>
+        // Global variables
+        let mediaRecorder = null;
+        let chunks = [];
+        let isRecording = false;
+        let currentStream = null;
+
+        // DOM elements
+        const chatMessagesEl = document.getElementById('chatMessages');
+        const chatFormEl = document.getElementById('chatForm');
+        const chatInputEl = document.getElementById('chatInput');
+        const sendBtnEl = document.getElementById('sendBtn');
+        const recordBtn = document.getElementById('recordBtn');
+        const charCounter = document.getElementById('charCounter');
+        const statusIndicator = document.getElementById('statusIndicator');
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeApp();
+        });
+
+        function initializeApp() {
+            setupEventListeners();
+            adjustTextareaHeight();
+            updateCharCounter();
+            checkServerStatus();
+        }
+
+        function setupEventListeners() {
+            // Form submission
+            chatFormEl.addEventListener('submit', handleFormSubmit);
+            
+            // Voice recording
+            recordBtn.addEventListener('click', toggleRecording);
+            
+            // Textarea auto-resize and character counter
+            chatInputEl.addEventListener('input', () => {
+                adjustTextareaHeight();
+                updateCharCounter();
+            });
+
+            // Enter key handling
+            chatInputEl.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    chatFormEl.dispatchEvent(new Event('submit'));
+                }
+            });
+        }
+
+        function updateCharCounter() {
+            const length = chatInputEl.value.length;
+            charCounter.textContent = `${length}/1000`;
+            charCounter.className = length > 900 ? 'text-xs text-amber-400' : 'text-xs text-slate-500';
+        }
+
+        function adjustTextareaHeight() {
+            chatInputEl.style.height = 'auto';
+            const scrollHeight = Math.min(chatInputEl.scrollHeight, 150);
+            chatInputEl.style.height = scrollHeight + 'px';
+        }
+
+        async function checkServerStatus() {
+            try {
+                const response = await fetch('/api/_env_check');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.haveOpenAI) {
+                        statusIndicator.className = 'w-2 h-2 bg-emerald-500 rounded-full';
+                    } else {
+                        statusIndicator.className = 'w-2 h-2 bg-amber-500 rounded-full';
+                    }
+                } else {
+                    statusIndicator.className = 'w-2 h-2 bg-red-500 rounded-full';
+                }
+            } catch (error) {
+                statusIndicator.className = 'w-2 h-2 bg-red-500 rounded-full';
+            }
+        }
+
+        // Message handling
+        function escapeHtml(text) {
+            if (!text) return '';
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function scrollToBottom() {
+            try {
+                chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+            } catch (e) {
+                console.warn('Erro ao fazer scroll:', e);
+            }
+        }
+
+        function addMessage(text, isUser = true, isLoading = false) {
+            const wrapper = document.createElement('div');
+            wrapper.className = `flex ${isUser ? 'justify-end' : 'justify-start'} message-animation`;
+
+            if (isLoading) {
+                wrapper.innerHTML = `
+                    <div class="max-w-[85%] rounded-lg bg-slate-800 border border-slate-700 px-4 py-3">
+                        <div class="flex items-center gap-2">
+                            <div class="w-6 h-6 bg-emerald-600 rounded-full flex items-center justify-center text-xs">
+                                🫁
+                            </div>
+                            <div class="typing-indicator">
+                                <div class="typing-dot"></div>
+                                <div class="typing-dot"></div>
+                                <div class="typing-dot"></div>
+                            </div>
+                            <span class="text-sm text-slate-300 ml-2">Pensando...</span>
+                        </div>
+                    </div>
+                `;
+            } else if (isUser) {
+                wrapper.innerHTML = `
+                    <div class="max-w-[85%] rounded-lg bg-emerald-700 text-white px-4 py-3">
+                        <div class="flex items-start gap-2">
+                            <div class="w-6 h-6 bg-emerald-800 rounded-full flex items-center justify-center text-xs font-semibold">
+                                U
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-sm whitespace-pre-wrap">${escapeHtml(text)}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                wrapper.innerHTML = `
+                    <div class="max-w-[85%] rounded-lg bg-slate-800 border border-slate-700 px-4 py-3">
+                        <div class="flex items-start gap-2">
+                            <div class="w-6 h-6 bg-emerald-600 rounded-full flex items-center justify-center text-xs font-semibold">
+                                🫁
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-emerald-400 mb-1">Assistente</p>
+                                <div class="text-sm text-slate-100 whitespace-pre-wrap">${escapeHtml(text)}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            chatMessagesEl.appendChild(wrapper);
+            scrollToBottom();
+            return wrapper;
+        }
+
+        // Form submission handling
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            const text = chatInputEl.value.trim();
+            if (!text) return;
+
+            // Add user message
+            addMessage(text, true);
+            chatInputEl.value = '';
+            adjustTextareaHeight();
+            updateCharCounter();
+
+            // Disable form
+            sendBtnEl.disabled = true;
+            chatInputEl.disabled = true;
+
+            // Add loading message
+            const loadingEl = addMessage('', false, true);
+
+            try {
+                const answer = await fetchAnswerFromServer(text);
+                loadingEl.remove();
+                addMessage(answer, false);
+                
+                // Auto-play TTS
+                await playTTS(answer);
+
+            } catch (error) {
+                console.error('Erro ao consultar servidor:', error);
+                loadingEl.remove();
+                addMessage('Desculpe, ocorreu um erro ao consultar o assistente. Tente novamente.', false);
+            } finally {
+                sendBtnEl.disabled = false;
+                chatInputEl.disabled = false;
+                chatInputEl.focus();
+            }
+        }
+
+        async function fetchAnswerFromServer(text) {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messages: [{ role: 'user', content: text }] })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text().catch(() => null);
+                throw new Error(errorText || response.statusText || 'Erro na API');
+            }
+
+            const data = await response.json();
+            return data.answer || data.reply || 'Sem resposta disponível.';
+        }
+
+        async function playTTS(text) {
+            try {
+                const response = await fetch('/api/voice/tts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = URL.createObjectURL(blob);
+                    const audio = new Audio(url);
+                    await audio.play().catch(() => {
+                        console.log('TTS playback failed (user interaction may be required)');
+                    });
+                    URL.revokeObjectURL(url);
+                }
+            } catch (error) {
+                console.warn('TTS failed:', error);
+            }
+        }
+
+        // Voice recording handling
+        async function toggleRecording() {
+            if (!isRecording) {
+                await startRecording();
+            } else {
+                await stopRecording();
+            }
+        }
+
+        async function startRecording() {
+            try {
+                currentStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(currentStream);
+                chunks = [];
+
+                mediaRecorder.ondataavailable = (e) => {
+                    if (e.data && e.data.size > 0) chunks.push(e.data);
+                };
+
+                mediaRecorder.onstop = async () => {
+                    const blob = new Blob(chunks, { type: 'audio/webm' });
+                    await handleVoiceBlob(blob);
+                    
+                    // Clean up stream
+                    if (currentStream) {
+                        currentStream.getTracks().forEach(track => track.stop());
+                        currentStream = null;
+                    }
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                updateRecordButton();
+
+            } catch (error) {
+                console.error('Erro ao acessar microfone:', error);
+                alert('Erro ao acessar microfone: ' + (error.message || error));
+            }
+        }
+
+        async function stopRecording() {
+            try {
+                if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                    mediaRecorder.stop();
+                }
+            } catch (error) {
+                console.warn('Erro ao parar gravação:', error);
+            }
+            
+            isRecording = false;
+            updateRecordButton();
+        }
+
+        function updateRecordButton() {
+            if (isRecording) {
+                recordBtn.innerHTML = `
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 012 0v4a1 1 0 01-2 0V7zM12 9a1 1 0 10-2 0v2a1 1 0 102 0V9z" clip-rule="evenodd"></path>
+                    </svg>
+                    <span>Parar</span>
+                `;
+                recordBtn.className = 'px-4 py-3 rounded-lg bg-gray-600 hover:bg-gray-500 text-white font-medium transition-all duration-200 flex items-center gap-2 pulse-recording';
+            } else {
+                recordBtn.innerHTML = `
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clip-rule="evenodd"></path>
+                    </svg>
+                    <span>Falar</span>
+                `;
+                recordBtn.className = 'px-4 py-3 rounded-lg bg-red-600 hover:bg-red-500 text-white font-medium transition-all duration-200 flex items-center gap-2';
+            }
+        }
+
+        async function handleVoiceBlob(blob) {
+            const tempEl = addMessage('⏳ Transcrevendo áudio...', true);
+            const tempInner = tempEl.querySelector('.whitespace-pre-wrap') || tempEl.querySelector('p');
+
+            const formData = new FormData();
+            formData.append('file', blob, 'recording.webm');
+
+            try {
+                const response = await fetch('/api/voice/chat', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text().catch(() => null);
+                    tempEl.remove();
+                    addMessage('Erro ao processar áudio: ' + (errorText || response.statusText), false);
+                    return;
+                }
+
+                const data = await response.json();
+
+                // Update transcript
+                if (data.transcript && tempInner) {
+                    tempInner.textContent = data.transcript;
+                } else {
+                    tempEl.remove();
+                    addMessage('(Áudio processado, sem transcrição disponível)', true);
+                }
+
+                // Add assistant reply
+                if (data.reply) {
+                    addMessage(data.reply, false);
+                }
+
+                // Play audio response
+                if (data.audio_base64) {
+                    try {
+                        const audioBlob = base64ToBlob(data.audio_base64, 'audio/mpeg');
+                        const url = URL.createObjectURL(audioBlob);
+                        const audio = new Audio(url);
+                        await audio.play().catch(e => console.warn('Audio playback failed:', e));
+                        URL.revokeObjectURL(url);
+                    } catch (error) {
+                        console.warn('Erro ao reproduzir áudio:', error);
+                    }
+                }
+
+            } catch (error) {
+                console.error('Erro ao processar áudio:', error);
+                tempEl.remove();
+                addMessage('Erro ao enviar áudio: ' + (error.message || error), false);
+            }
+        }
+
+        function base64ToBlob(base64, mimeType) {
+            const bytes = atob(base64 || '');
+            const byteArray = new Uint8Array(bytes.length);
+            for (let i = 0; i < bytes.length; i++) {
+                byteArray[i] = bytes.charCodeAt(i);
+            }
+            return new Blob([byteArray], { type: mimeType });
+        }
+
+        // Error handling
+        window.addEventListener('error', (e) => {
+            console.error('Global error:', e.message, e.filename, e.lineno);
+        });
+    </script>
+</body>
+</html>
