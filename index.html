@@ -3,149 +3,54 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AR Med - Pulmão 3D com Chat Integrado</title>
+  <title>AR Med - Pulmão 3D com Chat 3D</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* Chat overlay para AR */
-    .ar-chat-overlay {
-      position: fixed;
-      bottom: 20px;
-      left: 20px;
-      right: 20px;
-      background: rgba(15, 23, 42, 0.95);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(51, 65, 85, 0.7);
-      border-radius: 12px;
-      z-index: 1000;
-      max-height: 40vh;
-      transition: all 0.3s ease;
-    }
-
-    .ar-chat-collapsed {
-      height: 60px;
-    }
-
-    .ar-chat-expanded {
-      height: 40vh;
-    }
-
-    .chat-messages-ar {
-      max-height: calc(40vh - 120px);
-      overflow-y: auto;
-      scrollbar-width: thin;
-      scrollbar-color: #334155 rgba(0,0,0,0.3);
-    }
-
-    .chat-messages-ar::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    .chat-messages-ar::-webkit-scrollbar-track {
-      background: rgba(0,0,0,0.2);
-      border-radius: 3px;
-    }
-
-    .chat-messages-ar::-webkit-scrollbar-thumb {
-      background: #334155;
-      border-radius: 3px;
-    }
-
-    /* Botão flutuante para chat em AR */
-    .ar-chat-toggle {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      background: rgba(16, 185, 129, 0.9);
-      backdrop-filter: blur(8px);
-      border: 2px solid rgba(5, 150, 105, 0.7);
-      color: white;
-      font-size: 24px;
-      cursor: pointer;
-      z-index: 1001;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.3s ease;
-      animation: pulse 2s infinite;
-    }
-
-    .ar-chat-toggle:hover {
-      background: rgba(5, 150, 105, 0.9);
-      transform: scale(1.1);
-    }
-
-    @keyframes pulse {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-      50% { box-shadow: 0 0 0 15px rgba(16, 185, 129, 0); }
-    }
-
-    /* Indicador de atividade do chat */
-    .chat-activity {
-      position: absolute;
-      top: -5px;
-      right: -5px;
-      width: 20px;
-      height: 20px;
-      background: #ef4444;
-      border-radius: 50%;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-size: 12px;
-      font-weight: bold;
-    }
-
-    /* Layout adaptável */
-    .desktop-layout {
-      display: flex;
-      height: 100vh;
-    }
-
-    .ar-layout {
-      width: 100vw;
-      height: 100vh;
-      position: relative;
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #0f172a;
     }
 
     #canvas-container {
-      width: 100%;
-      height: 100%;
+      width: 100vw;
+      height: 100vh;
       background: transparent;
     }
 
-    /* Ocultar chat lateral em AR */
-    .ar-mode .desktop-chat {
-      display: none;
+    /* Controles flutuantes mínimos */
+    .floating-controls {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      z-index: 100;
+      display: flex;
+      gap: 10px;
     }
 
-    .ar-mode .ar-chat-overlay {
-      display: block;
-    }
-
-    .desktop-mode .ar-chat-overlay {
-      display: none;
-    }
-
-    /* Melhor contraste para AR */
-    .ar-text {
-      color: #ffffff;
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-    }
-
-    .ar-button {
-      background: rgba(30, 41, 59, 0.9) !important;
+    .control-btn {
+      padding: 8px 12px;
+      background: rgba(30, 41, 59, 0.9);
+      color: white;
+      border: 1px solid rgba(51, 65, 85, 0.7);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
       backdrop-filter: blur(8px);
-      border: 1px solid rgba(51, 65, 85, 0.7) !important;
-      color: #ffffff !important;
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
     }
 
-    .ar-button:hover {
-      background: rgba(51, 65, 85, 0.9) !important;
+    .control-btn:hover {
+      background: rgba(51, 65, 85, 0.9);
+    }
+
+    /* Input oculto para interação de teclado */
+    #hiddenInput {
+      position: fixed;
+      left: -9999px;
+      opacity: 0;
     }
   </style>
   <script type="importmap">
@@ -157,89 +62,19 @@
     }
   </script>
 </head>
-<body class="bg-slate-900 text-slate-100 overflow-hidden">
-  
-  <!-- Layout Desktop/AR Adaptável -->
-  <div id="app" class="desktop-layout desktop-mode">
-    
-    <!-- Área 3D -->
-    <main class="flex-1 relative">
-      <div id="canvas-container"></div>
-
-      <!-- Barra superior -->
-      <div class="absolute top-4 left-4 right-4 flex items-center gap-2">
-        <div class="px-3 py-2 rounded bg-slate-800/70 backdrop-blur border border-slate-700 text-sm ar-text">
-          <span class="font-semibold">AR Med</span> • Visualização 3D/AR do pulmão
-        </div>
-        <div class="ml-auto flex gap-2">
-          <button id="resetCameraBtn" class="px-3 py-2 rounded ar-button text-sm">Resetar Câmera</button>
-          <button id="toggleAxesBtn" class="px-3 py-2 rounded ar-button text-sm">Eixos</button>
-          <button id="mouseModeBtn" class="px-3 py-2 rounded ar-button text-sm">Modo Mouse</button>
-          <div id="arButtonContainer"></div>
-        </div>
-      </div>
-
-      <!-- Instruções AR -->
-      <div id="arInstructions" class="absolute bottom-4 left-4 right-4 px-4 py-3 rounded bg-slate-800/90 backdrop-blur border border-slate-700 text-sm text-center hidden ar-text">
-        <p>🎮 <strong>Controles AR:</strong></p>
-        <p>• Gatilho principal: Agarrar modelo • Gatilho lateral: Teleporte • Chat: Botão verde no canto</p>
-      </div>
-    </main>
-
-    <!-- Chat Desktop (lateral) -->
-    <aside class="desktop-chat w-[380px] max-w-[90vw] border-l border-slate-800 bg-slate-900/90 backdrop-blur p-4 flex flex-col gap-3">
-      <div>
-        <h1 class="text-lg font-semibold">Assistente Pulmonar</h1>
-        <p class="text-xs text-slate-300">Especializado em pulmão e patologias.</p>
-      </div>
-
-      <div id="chatMessagesDesktop" class="flex-1 overflow-auto space-y-3 pr-1 chat-messages-ar"></div>
-
-      <form id="chatFormDesktop" class="flex gap-2">
-        <input id="chatInputDesktop" type="text" placeholder="Pergunte sobre pulmão..." 
-               class="flex-1 px-3 py-2 rounded bg-slate-800 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
-        <button id="recordBtnDesktop" type="button" class="px-3 py-2 rounded bg-red-600 hover:bg-red-500 text-white">
-          🎤 Falar
-        </button>
-        <button id="sendBtnDesktop" type="submit" class="px-3 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white">Enviar</button>
-      </form>
-    </aside>
+<body>
+  <!-- Controles mínimos -->
+  <div class="floating-controls">
+    <button id="resetBtn" class="control-btn">Reset</button>
+    <button id="toggleChatBtn" class="control-btn">Chat</button>
+    <div id="arButtonContainer"></div>
   </div>
 
-  <!-- Chat AR Overlay -->
-  <div id="arChatOverlay" class="ar-chat-overlay ar-chat-collapsed">
-    <!-- Botão Toggle do Chat -->
-    <div class="flex items-center justify-between p-4 border-b border-slate-700/50">
-      <h3 class="text-sm font-semibold text-white">Assistente Pulmonar</h3>
-      <button id="toggleChatBtn" class="text-emerald-400 hover:text-emerald-300 transition-colors">
-        <span id="toggleIcon">▲</span>
-      </button>
-    </div>
+  <!-- Input invisível para capturar texto -->
+  <input type="text" id="hiddenInput" autocomplete="off">
 
-    <!-- Área de mensagens (oculta quando colapsado) -->
-    <div id="arChatContent" class="hidden">
-      <div id="chatMessagesAR" class="chat-messages-ar p-4 space-y-3"></div>
-      
-      <div class="p-4 border-t border-slate-700/50">
-        <form id="chatFormAR" class="flex gap-2">
-          <input id="chatInputAR" type="text" placeholder="Pergunte sobre o pulmão..." 
-                 class="flex-1 px-3 py-2 rounded bg-slate-800/70 border border-slate-600/50 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white placeholder-slate-400" />
-          <button id="recordBtnAR" type="button" class="px-3 py-2 rounded bg-red-600/80 hover:bg-red-500 text-white backdrop-blur">
-            🎤
-          </button>
-          <button id="sendBtnAR" type="submit" class="px-3 py-2 rounded bg-emerald-600/80 hover:bg-emerald-500 text-white backdrop-blur">
-            📤
-          </button>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <!-- Botão flutuante para ativar chat em AR -->
-  <button id="arChatToggle" class="ar-chat-toggle" style="display: none;">
-    💬
-    <div id="chatNotification" class="chat-activity">!</div>
-  </button>
+  <!-- Área 3D -->
+  <div id="canvas-container"></div>
 
   <script type="module">
     import * as THREE from 'three';
@@ -251,103 +86,181 @@
     let renderer, scene, camera, controls, group;
     let isARMode = false;
     let lungModel = null;
+    let chatPanel = null;
+    let chatMessages = [];
+    let currentInputText = '';
+    let isTyping = false;
 
-    // Sistema de chat
-    class ARChatSystem {
-      constructor() {
-        this.isExpanded = false;
-        this.messageCount = 0;
-        this.setupEventListeners();
-        this.initializeChat();
+    // Sistema de Chat 3D
+    class Chat3D {
+      constructor(scene) {
+        this.scene = scene;
+        this.group = new THREE.Group();
+        this.messages = [];
+        this.maxMessages = 8;
+        this.isVisible = true;
+        this.width = 4;
+        this.height = 3;
+        
+        this.createChatPanel();
+        this.addWelcomeMessage();
+        
+        scene.add(this.group);
       }
 
-      setupEventListeners() {
-        // Toggle chat AR
-        document.getElementById('toggleChatBtn').addEventListener('click', () => {
-          this.toggleChat();
+      createChatPanel() {
+        // Painel de fundo
+        const panelGeometry = new THREE.PlaneGeometry(this.width, this.height);
+        const panelMaterial = new THREE.MeshBasicMaterial({
+          color: 0x1e293b,
+          transparent: true,
+          opacity: 0.9,
+          side: THREE.DoubleSide
         });
+        
+        this.panel = new THREE.Mesh(panelGeometry, panelMaterial);
+        this.group.add(this.panel);
 
-        // Botão flutuante
-        document.getElementById('arChatToggle').addEventListener('click', () => {
-          this.showChat();
+        // Borda do painel
+        const borderGeometry = new THREE.EdgesGeometry(panelGeometry);
+        const borderMaterial = new THREE.LineBasicMaterial({ 
+          color: 0x10b981,
+          linewidth: 2
         });
+        const border = new THREE.LineSegments(borderGeometry, borderMaterial);
+        this.group.add(border);
 
-        // Forms de chat
-        document.getElementById('chatFormAR').addEventListener('submit', (e) => {
-          e.preventDefault();
-          this.sendMessage('AR');
+        // Título
+        this.createText("Assistente Pulmonar", 0, this.height/2 - 0.2, 0.15, 0x10b981);
+        
+        // Área de input
+        const inputGeometry = new THREE.PlaneGeometry(this.width - 0.2, 0.3);
+        const inputMaterial = new THREE.MeshBasicMaterial({
+          color: 0x374151,
+          transparent: true,
+          opacity: 0.8
         });
+        
+        this.inputPanel = new THREE.Mesh(inputGeometry, inputMaterial);
+        this.inputPanel.position.set(0, -this.height/2 + 0.2, 0.001);
+        this.group.add(this.inputPanel);
 
-        document.getElementById('chatFormDesktop').addEventListener('submit', (e) => {
-          e.preventDefault();
-          this.sendMessage('Desktop');
-        });
+        // Texto do input
+        this.inputText = this.createText("Digite sua pergunta...", 0, -this.height/2 + 0.2, 0.08, 0x9ca3af);
 
-        // Botões de voz
-        document.getElementById('recordBtnAR').addEventListener('click', () => {
-          this.startVoiceRecording('AR');
-        });
-
-        document.getElementById('recordBtnDesktop').addEventListener('click', () => {
-          this.startVoiceRecording('Desktop');
-        });
+        // Posicionar chat
+        this.group.position.set(3, 0, -1);
+        this.group.rotation.y = -0.3;
       }
 
-      initializeChat() {
-        const welcomeMsg = "Olá! Sou seu assistente especializado em pulmão e patologias respiratórias. Como posso ajudar?";
-        this.addMessage(welcomeMsg, false, 'both');
+      createText(text, x, y, size, color) {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        
+        // Configurar canvas
+        canvas.width = 1024;
+        canvas.height = 256;
+        
+        context.fillStyle = `#${color.toString(16).padStart(6, '0')}`;
+        context.font = `${size * 400}px Arial`;
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        
+        // Quebrar texto em linhas se necessário
+        const words = text.split(' ');
+        const lines = [];
+        let currentLine = '';
+        const maxWidth = canvas.width - 40;
+        
+        for (const word of words) {
+          const testLine = currentLine + (currentLine ? ' ' : '') + word;
+          const metrics = context.measureText(testLine);
+          
+          if (metrics.width > maxWidth && currentLine) {
+            lines.push(currentLine);
+            currentLine = word;
+          } else {
+            currentLine = testLine;
+          }
+        }
+        if (currentLine) lines.push(currentLine);
+        
+        // Desenhar linhas
+        const lineHeight = size * 400 * 1.2;
+        const startY = canvas.height / 2 - (lines.length - 1) * lineHeight / 2;
+        
+        for (let i = 0; i < lines.length; i++) {
+          context.fillText(lines[i], canvas.width / 2, startY + i * lineHeight);
+        }
+        
+        // Criar textura e material
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.needsUpdate = true;
+        
+        const material = new THREE.MeshBasicMaterial({
+          map: texture,
+          transparent: true,
+          alphaTest: 0.1
+        });
+        
+        const geometry = new THREE.PlaneGeometry(2, 0.5);
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.position.set(x, y, 0.002);
+        
+        this.group.add(mesh);
+        return mesh;
       }
 
-      toggleChat() {
-        const overlay = document.getElementById('arChatOverlay');
-        const content = document.getElementById('arChatContent');
-        const icon = document.getElementById('toggleIcon');
+      addMessage(text, isUser = false) {
+        if (this.messages.length >= this.maxMessages) {
+          // Remove mensagem mais antiga
+          const oldMessage = this.messages.shift();
+          this.group.remove(oldMessage);
+        }
 
-        this.isExpanded = !this.isExpanded;
+        const color = isUser ? 0x10b981 : 0xe5e7eb;
+        const yPos = this.height/2 - 0.6 - (this.messages.length * 0.35);
+        
+        const message = this.createText(
+          isUser ? `Você: ${text}` : text, 
+          0, 
+          yPos, 
+          0.08, 
+          color
+        );
+        
+        this.messages.push(message);
+        this.scrollMessages();
+      }
 
-        if (this.isExpanded) {
-          overlay.classList.remove('ar-chat-collapsed');
-          overlay.classList.add('ar-chat-expanded');
-          content.classList.remove('hidden');
-          icon.textContent = '▼';
-        } else {
-          overlay.classList.remove('ar-chat-expanded');
-          overlay.classList.add('ar-chat-collapsed');
-          content.classList.add('hidden');
-          icon.textContent = '▲';
+      scrollMessages() {
+        // Reposicionar mensagens existentes
+        for (let i = 0; i < this.messages.length; i++) {
+          const yPos = this.height/2 - 0.6 - (i * 0.35);
+          this.messages[i].position.y = yPos;
         }
       }
 
-      showChat() {
-        const overlay = document.getElementById('arChatOverlay');
-        const toggle = document.getElementById('arChatToggle');
-        
-        if (!this.isExpanded) {
-          this.toggleChat();
+      updateInputText(text) {
+        if (this.inputText) {
+          this.group.remove(this.inputText);
         }
         
-        toggle.style.display = 'none';
-        this.clearNotification();
+        const displayText = text || "Digite sua pergunta...";
+        const color = text ? 0xffffff : 0x9ca3af;
+        
+        this.inputText = this.createText(displayText, 0, -this.height/2 + 0.2, 0.08, color);
       }
 
-      async sendMessage(mode) {
-        const inputId = mode === 'AR' ? 'chatInputAR' : 'chatInputDesktop';
-        const sendBtnId = mode === 'AR' ? 'sendBtnAR' : 'sendBtnDesktop';
+      async sendMessage(text) {
+        if (!text.trim()) return;
         
-        const input = document.getElementById(inputId);
-        const sendBtn = document.getElementById(sendBtnId);
-        const text = input.value.trim();
-
-        if (!text) return;
-
-        // Adicionar mensagem do usuário
-        this.addMessage(text, true, 'both');
-        input.value = '';
-        sendBtn.disabled = true;
-
+        this.addMessage(text, true);
+        this.updateInputText('');
+        
         // Mostrar indicador de digitação
-        const thinkingId = this.addMessage('🤔 Pensando...', false, 'both');
-
+        this.addMessage("Pensando...", false);
+        
         try {
           const response = await fetch('/api/chat', {
             method: 'POST',
@@ -358,157 +271,28 @@
           });
 
           const data = await response.json();
-          this.removeMessage(thinkingId);
+          
+          // Remove indicador de digitação
+          if (this.messages.length > 0) {
+            const thinkingMessage = this.messages.pop();
+            this.group.remove(thinkingMessage);
+          }
           
           if (data.answer) {
-            this.addMessage(data.answer, false, 'both');
-            // TTS para AR se disponível
-            if (isARMode) {
-              this.playTTS(data.answer);
-            }
+            this.addMessage(data.answer, false);
+            // TTS se disponível
+            this.playTTS(data.answer);
           } else {
-            this.addMessage('Desculpe, ocorreu um erro. Tente novamente.', false, 'both');
+            this.addMessage('Desculpe, ocorreu um erro.', false);
           }
         } catch (error) {
           console.error('Erro no chat:', error);
-          this.removeMessage(thinkingId);
-          this.addMessage('Erro de conexão. Verifique sua internet.', false, 'both');
-        } finally {
-          sendBtn.disabled = false;
-        }
-      }
-
-      addMessage(text, isUser, target) {
-        const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        const messageHTML = `
-          <div id="${messageId}" class="flex ${isUser ? 'justify-end' : 'justify-start'} mb-2">
-            <div class="max-w-[85%] rounded-lg ${isUser ? 'bg-emerald-700 text-white' : 'bg-slate-800 text-slate-100'} px-3 py-2 text-sm">
-              ${this.escapeHtml(text)}
-            </div>
-          </div>
-        `;
-
-        if (target === 'both' || target === 'AR') {
-          const arContainer = document.getElementById('chatMessagesAR');
-          arContainer.insertAdjacentHTML('beforeend', messageHTML.replace(messageId, messageId + '_ar'));
-          arContainer.scrollTop = arContainer.scrollHeight;
-        }
-
-        if (target === 'both' || target === 'Desktop') {
-          const desktopContainer = document.getElementById('chatMessagesDesktop');
-          desktopContainer.insertAdjacentHTML('beforeend', messageHTML.replace(messageId, messageId + '_desktop'));
-          desktopContainer.scrollTop = desktopContainer.scrollHeight;
-        }
-
-        // Notificação em AR se chat estiver fechado
-        if (isARMode && !isUser && !this.isExpanded) {
-          this.showNotification();
-        }
-
-        return messageId;
-      }
-
-      removeMessage(messageId) {
-        document.getElementById(messageId + '_ar')?.remove();
-        document.getElementById(messageId + '_desktop')?.remove();
-      }
-
-      escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-      }
-
-      showNotification() {
-        const notification = document.getElementById('chatNotification');
-        const toggle = document.getElementById('arChatToggle');
-        
-        notification.style.display = 'flex';
-        toggle.style.display = 'flex';
-        this.messageCount++;
-        
-        if (this.messageCount > 9) {
-          notification.textContent = '9+';
-        } else {
-          notification.textContent = this.messageCount;
-        }
-      }
-
-      clearNotification() {
-        const notification = document.getElementById('chatNotification');
-        notification.style.display = 'none';
-        this.messageCount = 0;
-      }
-
-      async startVoiceRecording(mode) {
-        // Implementação básica de gravação de voz
-        const recordBtn = document.getElementById(mode === 'AR' ? 'recordBtnAR' : 'recordBtnDesktop');
-        
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          const mediaRecorder = new MediaRecorder(stream);
-          const chunks = [];
-
-          mediaRecorder.ondataavailable = (e) => {
-            if (e.data.size > 0) chunks.push(e.data);
-          };
-
-          mediaRecorder.onstop = async () => {
-            const blob = new Blob(chunks, { type: 'audio/webm' });
-            await this.processVoiceInput(blob, mode);
-            stream.getTracks().forEach(track => track.stop());
-          };
-
-          recordBtn.textContent = mode === 'AR' ? '⏹️' : '⏹️ Parar';
-          recordBtn.style.background = '#dc2626';
-          
-          mediaRecorder.start();
-
-          setTimeout(() => {
-            if (mediaRecorder.state === 'recording') {
-              mediaRecorder.stop();
-              recordBtn.textContent = mode === 'AR' ? '🎤' : '🎤 Falar';
-              recordBtn.style.background = '';
-            }
-          }, 5000); // Auto-stop after 5 seconds
-
-        } catch (error) {
-          console.error('Erro ao acessar microfone:', error);
-          this.addMessage('Erro ao acessar o microfone. Verifique as permissões.', false, 'both');
-        }
-      }
-
-      async processVoiceInput(blob, mode) {
-        const thinkingId = this.addMessage('🎙️ Transcrevendo áudio...', true, 'both');
-
-        try {
-          const formData = new FormData();
-          formData.append('file', blob, 'recording.webm');
-
-          const response = await fetch('/api/voice/chat', {
-            method: 'POST',
-            body: formData
-          });
-
-          const data = await response.json();
-          this.removeMessage(thinkingId);
-
-          if (data.transcript) {
-            this.addMessage(data.transcript, true, 'both');
+          // Remove indicador de digitação
+          if (this.messages.length > 0) {
+            const thinkingMessage = this.messages.pop();
+            this.group.remove(thinkingMessage);
           }
-
-          if (data.reply) {
-            this.addMessage(data.reply, false, 'both');
-          }
-
-          if (data.audio_base64 && isARMode) {
-            this.playAudioFromBase64(data.audio_base64);
-          }
-
-        } catch (error) {
-          console.error('Erro no processamento de voz:', error);
-          this.removeMessage(thinkingId);
-          this.addMessage('Erro ao processar áudio. Tente novamente.', false, 'both');
+          this.addMessage('Erro de conexão.', false);
         }
       }
 
@@ -527,27 +311,25 @@
             await audio.play();
           }
         } catch (error) {
-          console.warn('Erro no TTS:', error);
+          console.warn('TTS não disponível:', error);
         }
       }
 
-      playAudioFromBase64(base64) {
-        try {
-          const bytes = atob(base64);
-          const arrayBuffer = new ArrayBuffer(bytes.length);
-          const uint8Array = new Uint8Array(arrayBuffer);
-          
-          for (let i = 0; i < bytes.length; i++) {
-            uint8Array[i] = bytes.charCodeAt(i);
-          }
+      addWelcomeMessage() {
+        this.addMessage("Olá! Sou especialista em pulmão. Como posso ajudar?", false);
+      }
 
-          const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
-          const url = URL.createObjectURL(blob);
-          const audio = new Audio(url);
-          audio.play();
-        } catch (error) {
-          console.warn('Erro ao reproduzir áudio:', error);
-        }
+      toggle() {
+        this.isVisible = !this.isVisible;
+        this.group.visible = this.isVisible;
+      }
+
+      setPosition(x, y, z) {
+        this.group.position.set(x, y, z);
+      }
+
+      setRotation(x, y, z) {
+        this.group.rotation.set(x, y, z);
       }
     }
 
@@ -558,7 +340,7 @@
       // Renderer
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
       renderer.setPixelRatio(window.devicePixelRatio);
-      renderer.setSize(container.clientWidth, container.clientHeight);
+      renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.xr.enabled = true;
       renderer.setClearColor(0x000000, 0);
       container.appendChild(renderer.domElement);
@@ -568,7 +350,7 @@
       scene.background = new THREE.Color(0x1e293b);
 
       // Câmera
-      camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
       camera.position.set(0, 1.6, 3);
 
       // Grupo para o modelo
@@ -588,7 +370,21 @@
       controls.enableDamping = true;
       controls.dampingFactor = 0.05;
 
+      // Sistema de chat 3D
+      chatPanel = new Chat3D(scene);
+
       // Carregar modelo do pulmão
+      loadLungModel();
+
+      // Botão AR
+      setupARButton();
+
+      // Event listeners
+      setupEventListeners();
+      setupKeyboardInput();
+    }
+
+    function loadLungModel() {
       const loader = new GLTFLoader();
       loader.load('/models/lung.glb', (gltf) => {
         lungModel = gltf.scene;
@@ -614,20 +410,20 @@
         const placeholder = new THREE.Mesh(geometry, material);
         group.add(placeholder);
       });
+    }
 
-      // Botão AR
+    function setupARButton() {
       const arButton = ARButton.createButton(renderer, {
         requiredFeatures: ['hit-test'],
         optionalFeatures: ['dom-overlay'],
         domOverlay: { root: document.body }
       });
+      
+      arButton.textContent = 'Entrar em AR';
+      arButton.style.fontSize = '12px';
+      arButton.style.padding = '8px 12px';
+      
       document.getElementById('arButtonContainer').appendChild(arButton);
-
-      // Event listeners
-      setupEventListeners();
-
-      // Sistema de chat
-      window.chatSystem = new ARChatSystem();
     }
 
     function setupEventListeners() {
@@ -635,40 +431,34 @@
       renderer.xr.addEventListener('sessionstart', () => {
         console.log('Sessão AR iniciada');
         isARMode = true;
-        document.getElementById('app').classList.remove('desktop-mode');
-        document.getElementById('app').classList.add('ar-mode');
         scene.background = null;
         controls.enabled = false;
         
-        // Posicionar modelo na frente da câmera
+        // Posicionar elementos para AR
         setTimeout(() => {
-          group.position.set(0, 0, -2);
-          group.visible = true;
+          group.position.set(-1.5, 0, -2);
+          chatPanel.setPosition(1.5, 0, -2);
+          chatPanel.setRotation(0, -0.3, 0);
         }, 1000);
-
-        // Mostrar instruções
-        document.getElementById('arInstructions').classList.remove('hidden');
-        setTimeout(() => {
-          document.getElementById('arInstructions').classList.add('hidden');
-        }, 8000);
       });
 
       renderer.xr.addEventListener('sessionend', () => {
         console.log('Sessão AR finalizada');
         isARMode = false;
-        document.getElementById('app').classList.remove('ar-mode');
-        document.getElementById('app').classList.add('desktop-mode');
         scene.background = new THREE.Color(0x1e293b);
         controls.enabled = true;
-        document.getElementById('arChatToggle').style.display = 'none';
+        
+        // Restaurar posições para desktop
+        group.position.set(0, 0, 0);
+        chatPanel.setPosition(3, 0, -1);
+        chatPanel.setRotation(0, -0.3, 0);
       });
 
       // Botões de controle
-      document.getElementById('resetCameraBtn').addEventListener('click', () => {
+      document.getElementById('resetBtn').addEventListener('click', () => {
         if (isARMode) {
-          group.position.set(0, 0, -2);
-          group.rotation.set(0, 0, 0);
-          group.scale.set(1, 1, 1);
+          group.position.set(-1.5, 0, -2);
+          chatPanel.setPosition(1.5, 0, -2);
         } else {
           camera.position.set(0, 1.6, 3);
           controls.target.set(0, 0, 0);
@@ -676,30 +466,73 @@
         }
       });
 
-      document.getElementById('toggleAxesBtn').addEventListener('click', () => {
-        const axes = scene.getObjectByName('axes');
-        if (axes) {
-          axes.visible = !axes.visible;
-        } else {
-          const axesHelper = new THREE.AxesHelper(1);
-          axesHelper.name = 'axes';
-          group.add(axesHelper);
-        }
-      });
-
-      document.getElementById('mouseModeBtn').addEventListener('click', () => {
-        if (isARMode) {
-          renderer.xr.getSession()?.end();
-        }
+      document.getElementById('toggleChatBtn').addEventListener('click', () => {
+        chatPanel.toggle();
       });
 
       // Resize
       window.addEventListener('resize', () => {
-        const container = document.getElementById('canvas-container');
-        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
-        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setSize(window.innerWidth, window.innerHeight);
       });
+
+      // Click no chat para focar input
+      window.addEventListener('click', (event) => {
+        // Verificar se clicou na área do chat
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects([chatPanel.panel]);
+        
+        if (intersects.length > 0) {
+          focusInput();
+        }
+      });
+    }
+
+    function setupKeyboardInput() {
+      const hiddenInput = document.getElementById('hiddenInput');
+      
+      hiddenInput.addEventListener('input', (e) => {
+        currentInputText = e.target.value;
+        chatPanel.updateInputText(currentInputText);
+      });
+
+      hiddenInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (currentInputText.trim()) {
+            chatPanel.sendMessage(currentInputText);
+            currentInputText = '';
+            hiddenInput.value = '';
+            chatPanel.updateInputText('');
+          }
+          hiddenInput.blur();
+        } else if (e.key === 'Escape') {
+          hiddenInput.blur();
+          chatPanel.updateInputText('');
+        }
+      });
+
+      // Atalho de teclado para focar o chat
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Tab' || e.key === '/') {
+          e.preventDefault();
+          focusInput();
+        }
+      });
+    }
+
+    function focusInput() {
+      const hiddenInput = document.getElementById('hiddenInput');
+      hiddenInput.focus();
+      isTyping = true;
+      chatPanel.updateInputText(currentInputText || '');
     }
 
     function animate() {
@@ -707,7 +540,7 @@
     }
 
     function render() {
-      if (controls.enabled) {
+      if (controls && controls.enabled) {
         controls.update();
       }
 
